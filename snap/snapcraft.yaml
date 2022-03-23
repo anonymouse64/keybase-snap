@@ -7,6 +7,10 @@ description: Keybase is a chat app
 grade: stable
 confinement: strict
 
+# TODO: support other architectures
+architectures:
+  - build-on: amd64
+
 package-repositories:
   # for yarn
   - type: apt
@@ -129,7 +133,6 @@ parts:
   #     - unzip
   #     - rsync
   #   build-environment:
-  #     # TODO: make this configurable / per-arch
   #     - KEYBASE_SKIP_32_BIT: "1"
   #   override-build: |
   #     # HACK: the git://github.com links in package.json don't work to build
@@ -138,7 +141,6 @@ parts:
   #     sed -i s@git://github.com@https://github.com@g ./shared/package.json
   #     cd packaging/linux
   #     ./build_binaries.sh prerelease $SNAPCRAFT_PART_BUILD
-  #     # TODO: eventually support other architectures too
   #     cp -r $SNAPCRAFT_PART_BUILD/binaries/amd64/* $SNAPCRAFT_PART_INSTALL
 
   #     # fix suid on chrome-sandbox - note this may not be needed?
@@ -190,7 +192,6 @@ parts:
   #     - unzip
   #     - rsync
   #   build-environment:
-  #     # TODO: make this configurable / per-arch
   #     - KEYBASE_SKIP_32_BIT: "1"
   #   stage-packages:
   #     - libnss3
