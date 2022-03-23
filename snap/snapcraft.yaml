@@ -1,0 +1,267 @@
+name: keybase
+base: core18
+version: "0.3"
+summary: Keybase is a chat app
+description: Keybase is a chat app
+
+grade: stable
+confinement: strict
+
+package-repositories:
+  # for yarn
+  - type: apt
+    url: https://dl.yarnpkg.com/debian/
+    suites: ["stable"]
+    components:
+      - "main"
+    key-id: 72ECF46A56B4AD39C907BBB71646B01B86E50310
+
+plugs:
+  # use our own font cache so as not to get conflicted with the host
+  desktop:
+    mount-host-font-cache: false
+  # use allow-sandbox true until private shared-memory is available
+  browser-support:
+    allow-sandbox: true
+
+apps:
+  Keybase:
+    # the arch linux way
+    # command: electron usr/share/keybase-app
+
+    # the deb + built from source way of executing
+    command: opt/keybase/Keybase
+
+    extensions: [gnome-3-28]
+    desktop: usr/share/applications/keybase.desktop
+    command-chain:
+      # this just sources $SNAP_USER_DATA/.config/keybase/keybase.env
+      - setup-env.sh
+    plugs:
+      - network
+      - network-bind
+      - browser-support
+
+  keybase-cli:
+    command: usr/bin/keybase
+    plugs:
+      - network
+      - network-bind
+      - home
+
+  keybase-svc:
+    command: usr/bin/keybase --debug service
+    passthrough:
+      install-mode: disable
+      daemon-scope: user
+    daemon: simple
+    plugs:
+      - network
+      - network-bind
+
+  kbfs:
+    command: usr/bin/kbfsfuse -debug
+    passthrough:
+      install-mode: disable
+      daemon-scope: user
+    after:
+      - keybase-svc
+      # - keybase-redirector
+    daemon: notify
+    plugs:
+      - daemon-notify
+      - fuse-support
+      - network
+      - network-bind
+      - network-observe # for resolv.conf maybe ?
+      - mount-observe
+
+  # left as a reference, but not used in the snap since /keybase doesn't work
+  # well inside a strict snap
+  # keybase-redirector:
+  #   passthrough:
+  #     install-mode: disable
+  #     daemon-scope: user
+  #     # from the systemd service, unclear if it's needed
+  #     start-command: bin/keybase --use-root-config-file config get --direct --assert-false --assert-ok-on-nil disable-root-redirector
+  #   after:
+  #     - keybase-svc
+  #   command: usr/bin/keybase-redirector /keybase
+  #   daemon: simple
+
+parts:
+  static:
+    source: static
+    plugin: dump
+    stage-packages:
+      - libnss3
+
+  fusermount-with-suid:
+    plugin: nil
+    stage-packages:
+      - fuse
+    override-build: |
+      # fix suid on fusermount
+      chmod 4555 $SNAPCRAFT_PART_INSTALL/bin/fusermount
+
+  ######
+  # attempt 1 just use the deb
+  ######
+
+  keybase-from-the-deb:
+    plugin: dump
+    source: https://prerelease.keybase.io/keybase_amd64.deb
+
+  ######
+  # attempt 2 build from source
+  ######
+
+  # keybase-from-source:
+  #   source: https://github.com/keybase/client.git
+  #   source-tag: v5.9.3
+  #   source-depth: 1
+  #   plugin: nil
+  #   build-snaps:
+  #     - go
+  #     - node/14/stable
+  #   build-packages:
+  #     - yarn # from package-repositories
+  #     - unzip
+  #     - rsync
+  #   build-environment:
+  #     # TODO: make this configurable / per-arch
+  #     - KEYBASE_SKIP_32_BIT: "1"
+  #   override-build: |
+  #     # HACK: the git://github.com links in package.json don't work to build
+  #     # anymore, so we need to use https:// but the tag we are checking out has
+  #     # not been fixed yet, so just patch it here locally to do that change
+  #     sed -i s@git://github.com@https://github.com@g ./shared/package.json
+  #     cd packaging/linux
+  #     ./build_binaries.sh prerelease $SNAPCRAFT_PART_BUILD
+  #     # TODO: eventually support other architectures too
+  #     cp -r $SNAPCRAFT_PART_BUILD/binaries/amd64/* $SNAPCRAFT_PART_INSTALL
+
+  #     # fix suid on chrome-sandbox - note this may not be needed?
+  #     chmod 4555 $SNAPCRAFT_PART_INSTALL/opt/keybase/chrome-sandbox
+
+  ######
+  # attempt 3 build it like arch linux does
+  ######
+
+  # keybase-the-arch-linux-way:
+  #   source: https://github.com/archlinux/svntogit-community.git
+  #   # this is packages/keybase as of mar 22nd 2022
+  #   source-commit: d9e788c5d90c816da93929a64e73027fcf1fa170
+  #   source-subdir: trunk
+  #   source-depth: 1
+  #   plugin: dump
+  #   # stage everything including the patches so we can consume later
+  #   stage:
+  #     - "*"
+  #   # but only prime the keybase-gui script
+  #   # organize:
+  #   #   keybase-gui: usr/bin/keybase-gui
+  #   # prime:
+  #   #   - usr/bin/keybase-gui
+
+  # electron13:
+  #   source: https://github.com/electron/electron/releases/download/v13.6.9/electron-v13.6.9-linux-x64.zip
+  #   plugin: dump
+  #   # filesets:
+  #   #   all: [/*]
+  #   # stage:
+  #   #   - $include-dir
+
+  # keybase-itself:
+  #   source: https://github.com/keybase/client.git
+  #   source-tag: v5.9.3
+  #   source-depth: 1
+  #   plugin: nil
+  #   after:
+  #     - keybase-the-arch-linux-way
+  #   stage: ["*"]
+  #   # don't prime anything from here
+  #   prime: []
+  #   build-snaps:
+  #     - go
+  #     - node/14/stable
+  #   build-packages:
+  #     - yarn # from package-repositories
+  #     - unzip
+  #     - rsync
+  #   build-environment:
+  #     # TODO: make this configurable / per-arch
+  #     - KEYBASE_SKIP_32_BIT: "1"
+  #   stage-packages:
+  #     - libnss3
+  #   override-pull: |
+
+  #     snapcraftctl pull
+
+  #     # apply the arch linux patches, we want those too - this is from the
+  #     # prepare() section in the arch linux packaging
+
+  #     # Fix paths to run electron /path/to/app (or our minimal wrapper script).
+  #     # Also wire up "hideWindow" when running as a service or via XDG autostart.
+  #     sed -i 's@/opt/keybase/Keybase@/usr/bin/electron13 /usr/share/keybase-app@' \
+  #       packaging/linux/systemd/keybase.gui.service
+  #     sed -i 's/run_keybase/keybase-gui/g' \
+  #       packaging/linux/keybase.desktop go/install/install_unix.go
+
+  #     patch -p1 -i $SNAPCRAFT_STAGE/0001-Don-t-use-electron-to-build.patch
+  #     # New versions of electron tighten sandboxing and applications need to adapt.
+  #     # Keybase did not, so loosen this back to pre v12 levels
+  #     # https://github.com/keybase/client/pull/24551
+  #     patch -p1 -i $SNAPCRAFT_STAGE/0001-Maintain-current-contextIsolation-behavior-across-el.patch
+
+  #     # HACK: the git://github.com links in package.json don't work to build
+  #     # anymore, so we need to use https:// but the tag we are checking out has
+  #     # not been fixed yet, so just patch it here locally to do that change
+  #     sed -i s@git://github.com@https://github.com@g ./shared/package.json
+
+  #   override-build: |
+
+  #     # install the license
+  #     install -Dm644 LICENSE "$SNAPCRAFT_PART_INSTALL/usr/share/licenses/$pkgname/LICENSE"
+
+  #     # install some graphical things
+  #     install -Dm644 packaging/linux/x-saltpack.xml \
+  #       "$SNAPCRAFT_PART_INSTALL/usr/share/mime/packages/x-saltpack.xml"
+
+  #     # TODO: this probably needs to be tweaked
+  #     install -Dm644 packaging/linux/keybase.desktop \
+  #       "$SNAPCRAFT_PART_INSTALL"/usr/share/applications/keybase.desktop
+
+  #     # build the go bits
+  #     cd go
+
+  #     export CGO_CPPFLAGS="${CPPFLAGS}"
+  #     export CGO_CFLAGS="${CFLAGS}"
+  #     export CGO_CXXFLAGS="${CXXFLAGS}"
+  #     export CGO_LDFLAGS="${LDFLAGS}"
+  #     export GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+
+  #     go build -a -tags production -o ./bin/keybase ./keybase
+  #     go build -a -tags production -o ./bin/kbnm ./kbnm
+  #     go build -a -tags production -o ./bin/kbfsfuse ./kbfs/kbfsfuse
+  #     go build -a -tags production -o ./bin/git-remote-keybase ./kbfs/kbfsgit/git-remote-keybase
+
+  #     # install the go bits
+  #     install -Dm755 -t $SNAPCRAFT_PART_INSTALL/usr/bin/ bin/keybase
+  #     install -Dm755 -t $SNAPCRAFT_PART_INSTALL/usr/bin/ bin/kbnm
+  #     install -Dm755 -t $SNAPCRAFT_PART_INSTALL/usr/bin/ bin/kbfsfuse
+  #     install -Dm755 -t $SNAPCRAFT_PART_INSTALL/usr/bin/ bin/git-remote-keybase
+
+  #     # build the electron bits
+  #     cd ../shared
+  #     yarn install
+  #     # need to change below for new versions
+  #     yarn run package --appVersion 5.9.3
+
+  #     # install graphical bits
+  #     cd ..
+
+  #     cd shared/desktop/build
+  #     rm -rf desktop/sourcemaps/
+  #     mkdir -p "$SNAPCRAFT_PART_INSTALL"/usr/share/keybase-app
+  #     cp -r * "$SNAPCRAFT_PART_INSTALL"/usr/share/keybase-app/

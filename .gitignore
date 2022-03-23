@@ -1,0 +1,3 @@
+# snap artifacts
+*.snap
+squashfs-root
