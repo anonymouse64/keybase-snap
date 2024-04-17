@@ -117,6 +117,8 @@ parts:
       craftctl default
       # Fix-up application icon lookup
       sed -i.bak -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/256x256/apps/keybase.png|' usr/share/applications/keybase.desktop
+      # fix suid on chrome-sandbox since we don't need it and run with --no-sandbox
+      chmod 0755 opt/keybase/chrome-sandbox
 
   # fails to build on LP behind proxy "RequestError: getaddrinfo ENOTFOUND github.com"
   # keybase:
