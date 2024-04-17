@@ -7,10 +7,6 @@ description: Keybase is a chat app
 grade: stable
 confinement: strict
 
-# TODO: support other architectures
-architectures:
-  - build-on: amd64
-
 package-repositories:
   # for yarn
   - type: apt
@@ -23,33 +19,29 @@ package-repositories:
 plugs:
   shared-memory:
     private: true
-  browser-support:
-    allow-sandbox: true
 
 apps:
-  Keybase:
-    # the arch linux way
-    # command: electron usr/share/keybase-app
-
-    # the deb + built from source way of executing
-    command: opt/keybase/Keybase
-    environment:
-      XDG_RUNTIME_DIR: $SNAP_USER_DATA/.config
+  keybase:
+    # avoid plugging browser-support and launch without sandbox since keybase
+    # doesn't generally handle untrusted content so there shouldn't be much of a
+    # threat here
+    command: opt/keybase/Keybase --no-sandbox
 
     extensions: [gnome]
     desktop: usr/share/applications/keybase.desktop
     command-chain:
-      # this just sources $SNAP_USER_DATA/.config/keybase/keybase.env
       - setup-env.sh
     plugs:
-      - audio-playback
+      - avahi-observe
       - network
       - network-bind
-      - browser-support
       - unity7
+      - cups
 
   keybase-cli:
     command: usr/bin/keybase
+    command-chain:
+      - setup-env.sh
     plugs:
       - network
       - network-bind
@@ -57,6 +49,8 @@ apps:
 
   keybase-svc:
     command: usr/bin/keybase --debug service
+    command-chain:
+      - setup-env.sh
     install-mode: disable
     daemon-scope: user
     daemon: simple
@@ -65,21 +59,23 @@ apps:
       - network-bind
 
   # TODO: fails to start
-  # kbfs:
-  #   command: usr/bin/kbfsfuse -debug
-  #   install-mode: disable
-  #   daemon-scope: user
-  #   after:
-  #     - keybase-svc
-  #     # - keybase-redirector
-  #   daemon: notify
-  #   plugs:
-  #     - daemon-notify
-  #     - fuse-support
-  #     - network
-  #     - network-bind
-  #     - network-observe # for resolv.conf maybe ?
-  #     - mount-observe
+  kbfs:
+    command: usr/bin/kbfsfuse -debug
+    command-chain:
+      - setup-env.sh
+    install-mode: disable
+    daemon-scope: user
+    after:
+      - keybase-svc
+      # - keybase-redirector
+    daemon: simple
+    plugs:
+      - fuse-support
+      - network
+      - network-bind
+      - network-observe # for resolv.conf maybe ?
+      - mount-observe
+      - home # to save files
 
   # left as a reference, but not used in the snap since /keybase doesn't work
   # well inside a strict snap

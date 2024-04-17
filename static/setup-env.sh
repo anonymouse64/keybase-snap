@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
-if [ -f "$SNAP_USER_DATA/.config/keybase/keybase.env" ]; then
-  source "$SNAP_USER_DATA/.config/keybase/keybase.env"
-  export $(grep -v '^#' "$SNAP_USER_DATA/.config/keybase/keybase.env" | xargs)
-fi
+# set XDG_RUNTIME_DIR but use current rather than the revision so that if it
+# gets stored by keybase it will remain valid for all revisions
+export XDG_RUNTIME_DIR=${SNAP_USER_DATA%/*}/current/.config
 exec "$@" 
