@@ -1,10 +1,10 @@
 name: keybase
 base: core22
 version: 6.2.8
-summary: Keybase is a chat app
-description: Keybase is a chat app
+summary: Keybase is secure messaging and file-sharing.
+description: End-to-end encryption for things that matter.
 
-grade: stable
+grade: devel
 confinement: strict
 
 # TODO: support other architectures
@@ -51,27 +51,31 @@ apps:
       - network-bind
       - home
 
-  keybase-svc:
+  service:
     command: usr/bin/keybase --debug service
     command-chain:
       - setup-env.sh
-    install-mode: disable
+    install-mode: enable
     daemon-scope: user
     daemon: simple
+    restart-condition: always
     plugs:
       - network
       - network-bind
 
-  # TODO: fails to start
   kbfs:
+    # TODO: kbfs ends up storing the path to mount including the snap revision so
+    # even if we get unprivileged fuse mounts working we need to make sure that
+    # its config uses the current symlink rather than the actual path otherwise
+    # mounting will fail once the snap is upgraded to a new revision
     command: usr/bin/kbfsfuse -debug
     command-chain:
       - setup-env.sh
-    install-mode: disable
+    install-mode: enable
     daemon-scope: user
     after:
-      - keybase-svc
-      # - keybase-redirector
+      - service
+    restart-condition: always
     daemon: simple
     plugs:
       - fuse-support
@@ -79,7 +83,6 @@ apps:
       - network-bind
       - network-observe # for resolv.conf maybe ?
       - mount-observe
-      - home # to save files
 
   # left as a reference, but not used in the snap since /keybase doesn't work
   # well inside a strict snap
@@ -101,13 +104,17 @@ parts:
     stage-packages:
       - libnss3
 
-  fusermount-with-suid:
+  # currently the fuse-support interface doesn't allow unprivileged fuse mounts
+  # so kbfs will always fail to mount even if we stage a setuid fusermount
+  # binary. So there is not much point in staging this until that is supported
+  # by snapd.
+  fusermount-without-suid:
     plugin: nil
     stage-packages:
       - fuse
     override-build: |
-      # fix suid on fusermount
-      chmod 4555 $SNAPCRAFT_PART_INSTALL/bin/fusermount
+      # remove suid on fusermount for now until fuse-support allows unprivileged mounts
+      chmod 0755 $SNAPCRAFT_PART_INSTALL/bin/fusermount
 
   keybase:
     plugin: dump
