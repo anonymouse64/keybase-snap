@@ -2,12 +2,13 @@ name: keybase
 base: core22
 version: 6.2.8
 summary: Keybase is secure messaging and file-sharing.
-description: End-to-end encryption for things that matter.
-
-NOTE: The keybase snap has a number of limitations due to the nature of the
-snap sandbox. In particular the git integration is not currently working and
-whilst it is possible to view files within keybase itself it is not possible to
-download them or upload them directly. Otherwise it should be quite functional.
+description: |
+ End-to-end encryption for things that matter.
+ 
+ NOTE: The keybase snap has a number of limitations due to the nature of the
+ snap sandbox. In particular the git integration is not currently working and
+ whilst it is possible to view files within keybase itself it is not possible to
+ download them or upload them directly. Otherwise it should be quite functional.
 
 grade: stable
 confinement: strict
