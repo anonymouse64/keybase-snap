@@ -13,10 +13,6 @@ description: |
 grade: stable
 confinement: strict
 
-# TODO: support other architectures
-architectures:
-  - build-on: amd64
-
 package-repositories:
   # for yarn
   - type: apt
