@@ -133,7 +133,6 @@ parts:
   #     # fix suid on chrome-sandbox since we don't need it and run with --no-sandbox
   #     chmod 0755 opt/keybase/chrome-sandbox
 
-  # fails to build on LP behind proxy "RequestError: getaddrinfo ENOTFOUND github.com"
   keybase:
     source: https://github.com/keybase/client.git
     source-tag: v$SNAPCRAFT_PROJECT_VERSION
@@ -149,6 +148,13 @@ parts:
     build-environment:
       - KEYBASE_SKIP_32_BIT: "1"
     override-build: |
+      # workaround for build.snapcraft.io builds
+      # https://bugs.launchpad.net/bugs/1886861
+      if [ -n "$http_proxy" ]; then
+        export ELECTRON_GET_USE_PROXY=1
+        export GLOBAL_AGENT_HTTP_PROXY="${http_proxy}"
+        export GLOBAL_AGENT_HTTPS_PROXY="${http_proxy}"
+      fi
       cd packaging/linux
       ./build_binaries.sh prerelease $SNAPCRAFT_PART_BUILD
       cp -r $SNAPCRAFT_PART_BUILD/binaries/$CRAFT_ARCH_BUILD_FOR/* $SNAPCRAFT_PART_INSTALL
