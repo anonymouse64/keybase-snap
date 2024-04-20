@@ -122,9 +122,36 @@ parts:
       # remove suid on fusermount for now until fuse-support allows unprivileged mounts
       chmod 0755 $SNAPCRAFT_PART_INSTALL/bin/fusermount
 
+  # keybase:
+  #   plugin: dump
+  #   source: https://prerelease.keybase.io/keybase_amd64.deb
+  #   override-prime: |
+  #     set -eu
+  #     craftctl default
+  #     # Fix-up application icon lookup
+  #     sed -i.bak -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/256x256/apps/keybase.png|' usr/share/applications/keybase.desktop
+  #     # fix suid on chrome-sandbox since we don't need it and run with --no-sandbox
+  #     chmod 0755 opt/keybase/chrome-sandbox
+
+  # fails to build on LP behind proxy "RequestError: getaddrinfo ENOTFOUND github.com"
   keybase:
-    plugin: dump
-    source: https://prerelease.keybase.io/keybase_amd64.deb
+    source: https://github.com/keybase/client.git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    source-depth: 1
+    plugin: nil
+    build-snaps:
+      - go
+      - node/20/stable
+    build-packages:
+      - yarn # from package-repositories
+      - unzip
+      - rsync
+    build-environment:
+      - KEYBASE_SKIP_32_BIT: "1"
+    override-build: |
+      cd packaging/linux
+      ./build_binaries.sh prerelease $SNAPCRAFT_PART_BUILD
+      cp -r $SNAPCRAFT_PART_BUILD/binaries/$CRAFT_ARCH_BUILD_FOR/* $SNAPCRAFT_PART_INSTALL
     override-prime: |
       set -eu
       craftctl default
@@ -132,27 +159,4 @@ parts:
       sed -i.bak -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/256x256/apps/keybase.png|' usr/share/applications/keybase.desktop
       # fix suid on chrome-sandbox since we don't need it and run with --no-sandbox
       chmod 0755 opt/keybase/chrome-sandbox
-
-  # fails to build on LP behind proxy "RequestError: getaddrinfo ENOTFOUND github.com"
-  # keybase:
-  #   source: https://github.com/keybase/client.git
-  #   source-tag: v$SNAPCRAFT_PROJECT_VERSION
-  #   source-depth: 1
-  #   plugin: nil
-  #   build-snaps:
-  #     - go
-  #     - node/20/stable
-  #   build-packages:
-  #     - yarn # from package-repositories
-  #     - unzip
-  #     - rsync
-  #   build-environment:
-  #     - KEYBASE_SKIP_32_BIT: "1"
-  #   override-build: |
-  #     cd packaging/linux
-  #     ./build_binaries.sh prerelease $SNAPCRAFT_PART_BUILD
-  #     cp -r $SNAPCRAFT_PART_BUILD/binaries/$CRAFT_ARCH_BUILD_FOR/* $SNAPCRAFT_PART_INSTALL
-
-  #     # fix suid on chrome-sandbox - note this may not be needed?
-  #     chmod 4555 $SNAPCRAFT_PART_INSTALL/opt/keybase/chrome-sandbox
 
