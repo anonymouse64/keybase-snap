@@ -54,7 +54,7 @@ apps:
       - home
 
   service:
-    command: usr/bin/keybase --debug service
+    command: usr/bin/keybase service
     command-chain:
       - setup-env.sh
     install-mode: enable
@@ -70,7 +70,7 @@ apps:
     # even if we get unprivileged fuse mounts working we need to make sure that
     # its config uses the current symlink rather than the actual path otherwise
     # mounting will fail once the snap is upgraded to a new revision
-    command: usr/bin/kbfsfuse -debug
+    command: usr/bin/kbfsfuse
     command-chain:
       - setup-env.sh
     install-mode: enable
