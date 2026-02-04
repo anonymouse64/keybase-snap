@@ -1,5 +1,5 @@
 name: keybase
-base: core22
+base: core24
 version: 6.5.2
 summary: Keybase is secure messaging and file-sharing.
 description: |
@@ -12,15 +12,6 @@ description: |
 
 grade: stable
 confinement: strict
-
-package-repositories:
-  # for yarn
-  - type: apt
-    url: https://dl.yarnpkg.com/debian/
-    suites: ["stable"]
-    components:
-      - "main"
-    key-id: 72ECF46A56B4AD39C907BBB71646B01B86E50310
 
 plugs:
   shared-memory:
@@ -138,7 +129,7 @@ parts:
       - go
       - node/20/stable
     build-packages:
-      - yarn # from package-repositories
+      - yarnpkg
       - unzip
       - rsync
     build-environment:
